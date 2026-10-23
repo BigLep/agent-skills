@@ -8,15 +8,14 @@ Personal [Agent Skills](https://agentskills.io) (the `SKILL.md` format read by C
 |---|---|
 | [copy-to-clipboard](skills/copy-to-clipboard) | Copy text to the macOS clipboard as plain text, Slack-ready, or rich HTML. macOS only. |
 | [humble-relay](skills/humble-relay) | Rewrite an agent-drafted message so it reads as the user relaying partly verified agent work. |
-| [incorporate-pr-comments](skills/incorporate-pr-comments) | Single pass over PR review comments: evaluate, fix, commit, push, reply, resolve. |
-| [review-pr](skills/review-pr) | Two-phase PR feedback handling: fix locally and report, then commit and respond on request. |
+| [incorporate-pr-comments](skills/incorporate-pr-comments) | Handle PR review feedback: evaluate comments, fix locally and draft replies, then commit, push, reply, and resolve once approved. |
 | [why-does-this-matter](skills/why-does-this-matter) | Turn a new release or technology into a personalized explainer-and-pitches slide deck. |
 
 ## Install
 
 ```sh
 npx skills add <owner>/agent-skills -g            # all skills
-npx skills add <owner>/agent-skills -g --skill review-pr   # one skill
+npx skills add <owner>/agent-skills -g --skill humble-relay   # one skill
 ```
 
 ## Local development
