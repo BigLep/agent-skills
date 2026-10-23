@@ -14,8 +14,8 @@ Personal [Agent Skills](https://agentskills.io) (the `SKILL.md` format read by C
 ## Install
 
 ```sh
-npx skills add <owner>/agent-skills -g            # all skills
-npx skills add <owner>/agent-skills -g --skill humble-relay   # one skill
+npx skills add BigLep/agent-skills -g            # all skills
+npx skills add BigLep/agent-skills -g --skill humble-relay   # one skill
 ```
 
 ## Local development
