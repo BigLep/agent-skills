@@ -1,0 +1,43 @@
+  <!-- EXAMPLE ONLY. Invented model, invented person.
+       Each pick card links to its pitch's handoff slide: write href="#pitch-N" and {{pitch-N}},
+       and stitch.py fills in the slide number. -->
+
+  <!-- SLIDE: pick · three pitches side by side, each one a jump to its handoff -->
+  <section class="slide">
+    <div class="head">
+      <span class="eyebrow">Your move</span>
+      <h2>Pick one. <em>Take it to your agent.</em></h2>
+    </div>
+    <div class="picks">
+      <a class="pick" href="#pitch-1" data-b="1">
+        <span class="n">01</span>
+        <b>Month-end close memo</b>
+        <p><span class="lbl">Because you</span>write one for every client, every month.</p>
+        <div class="get"><span class="lbl">You'll leave with</span><p>A tested plan for one client's memo.</p></div>
+        <span class="go">Handoff · slide {{pitch-1}}</span>
+      </a>
+      <a class="pick" href="#pitch-2" data-b="2">
+        <span class="n">02</span>
+        <b>Variance explainer</b>
+        <p><span class="lbl">Because you</span>get asked why margin moved on every call.</p>
+        <div class="get"><span class="lbl">You'll leave with</span><p>A one-page answer you can send.</p></div>
+        <span class="go">Handoff · slide {{pitch-2}}</span>
+      </a>
+      <a class="pick" href="#pitch-3" data-b="3">
+        <span class="n">03</span>
+        <b>Board pack first draft</b>
+        <p><span class="lbl">Because you</span>have a board pack due this month.</p>
+        <div class="get"><span class="lbl">You'll leave with</span><p>An outline built from your own memo.</p></div>
+        <span class="go">Handoff · slide {{pitch-3}}</span>
+      </a>
+    </div>
+  </section>
+
+  <!-- SLIDE: remember -->
+  <section class="slide">
+    <div></div>
+    <div class="remember">
+      <span class="k">Remember this</span>
+      <p>Stop writing the memo. Start reviewing it.</p>
+    </div>
+  </section>

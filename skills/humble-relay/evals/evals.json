@@ -1,0 +1,37 @@
+{
+  "skill_name": "humble-relay",
+  "evals": [
+    {
+      "id": 0,
+      "prompt": "You just spent the session comparing PR filecoin-project/lotus#13781 against issue #13723 for me. You read the actor source in builtin-actors and the review thread; I only looked at the PR diff and the review comments. Here's the wrap-up you drafted for me to post on the issue:\n\n```\nWrap-up now that #13781 has merged into feat/solstice.\n\n1. Post-upgrade removal is tracked in #13795.\n\n2. Gaps. I compared the issue, the review thread, and the merged code. Two things:\n\n- The final review asked to switch from ActiveSectors to LiveSectors so faulted sectors are included, and the reply said this was done. The merged code still uses active sectors only. That is the correct behaviour: the actor rejects any non-active sector with illegal_argument and would fail the whole message. But the review thread now says the opposite of what shipped. Worth a short follow-up PR to print a note about skipped faulted sectors.\n- Review asked for tests against the new command. What landed is unit tests for the message-packing helper. A CLI-level itest would close this.\n\nEverything else in the issue is covered.\n```\n\nI'll post this myself but I don't want it to sound like I checked all of that personally. Put it in my voice. The reviewer is LexLuthr (final review points at https://github.com/filecoin-project/lotus/pull/13781#issuecomment-5631659769, tests request at https://github.com/filecoin-project/lotus/pull/13781#pullrequestreview-5164616407) and the author is snail8501 (reply at https://github.com/filecoin-project/lotus/pull/13781#issuecomment-5632174401). Save the result as comment.md.",
+      "expected_output": "comment.md: the same comment with a provenance note, hedges on the actor-behaviour and interpretation claims only, @mentions and inline links to the three URLs, and the two recommendations rewritten as questions. Facts visible in the diff stay unhedged.",
+      "files": [],
+      "assertions": [
+        "Contains a provenance note attributing the analysis to an agent (e.g. 'with agent help')",
+        "Mentions @LexLuthr and @snail8501 by handle instead of 'the reviewer' / 'the author'",
+        "All three provided URLs appear as inline markdown links on the phrase making the claim",
+        "The actor-behaviour claim ('the actor rejects any non-active sector...') is hedged (I believe / I think / it looks like)",
+        "The diff-visible fact 'the merged code still uses active sectors only' is NOT hedged",
+        "The two recommendations (follow-up PR, CLI-level itest) are phrased as questions",
+        "Hedges appear on fewer than half of the sentences (not uniformly hedged)",
+        "No em dashes in the output"
+      ]
+    },
+    {
+      "id": 1,
+      "prompt": "Context: I asked you why our GitHub Actions job `itest-eth` has been flaky this week. You dug through the workflow file, the last 30 runs, and the test source and concluded it is a timing race in TestEthGetLogs where the test polls for logs before the event index has caught up; you found the index write in chain/index/indexer.go is async since PR #13650. I did run `gh run list` myself and confirmed 9 of the last 30 runs failed on that job. Here is the Slack message you drafted for #lotus-dev:\n\n```\nitest-eth flakiness: root cause found. TestEthGetLogs polls for logs before the event index finishes writing. The index write became async in #13650, which is when the failures started. 9 of the last 30 runs failed. Fix is to have the test wait on IndexedUpTo() before querying. I'll open a PR tomorrow.\n```\n\nRewrite this so it's in my voice: I want people to know an agent did the digging, and I'm not going to be the one who fixes it, that's up to whoever owns the eth itests. Save it as slack.md.",
+      "expected_output": "slack.md: short Slack message with a provenance note, the failure count left plain (user verified it), the root-cause and async-since-#13650 claims hedged and pointing at the file and PR, the fix turned into a question or suggestion for the owners, and the 'I'll open a PR tomorrow' commitment removed.",
+      "files": [],
+      "assertions": [
+        "Contains a provenance note attributing the digging to an agent",
+        "The '9 of the last 30 runs failed' figure is stated plainly without a hedge (the user verified it)",
+        "The root-cause claim (timing race / index write async since #13650) is hedged",
+        "Links or references to chain/index/indexer.go and PR #13650 are present so readers can check",
+        "The 'I'll open a PR tomorrow' commitment is removed",
+        "The fix is offered as a suggestion or question to the eth itest owners rather than a decision",
+        "Message is Slack-length (under 120 words)",
+        "No em dashes in the output"
+      ]
+    }
+  ]
+}
