@@ -23,7 +23,7 @@ npx skills add BigLep/agent-skills -g --skill humble-relay   # one skill
 On the authoring machine, skills are symlinked rather than installed, so edits take effect immediately:
 
 ```sh
-ln -s ~/Code/PersonalProjects/agent-skills/skills/<name> ~/.agents/skills/<name>
+ln -s ~/Documents/Code/PersonalProjects/agent-skills/skills/<name> ~/.agents/skills/<name>
 ln -s ../../.agents/skills/<name> ~/.claude/skills/<name>
 ```
 
