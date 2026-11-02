@@ -41,6 +41,12 @@ PAD = "x" * 400
         (PAD + "\nWhy does this fail on CI?", "open"),
         (PAD + "\n**Which region should we use?** And who reviews it?", "open"),
         (PAD + " (Is the deadline still Friday?)", "open"),
+        # "?" inside code is quoted material, not a question.
+        (PAD + "\nThe regex `a?b` and `**ok?**` now match.\nWant me to push it?", "skip:yes_no_offer"),
+        (PAD + "\n```\nwhy didn't it open? see SKILL.md\n```\nAll done.", "skip:no_question"),
+        (PAD + '\nIt failed because the "?" is followed by `**`.', "skip:no_question"),
+        (PAD + "\n1. What is the **start date**?\n2. Any open recalls?", "open"),
+        (PAD + "\nWhich worktree, the one at `/tmp/wt`? Or the other one?", "open"),
     ],
 )
 def test_rules(message: str, expected: str) -> None:

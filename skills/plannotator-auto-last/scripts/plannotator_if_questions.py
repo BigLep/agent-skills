@@ -50,9 +50,11 @@ from pathlib import Path
 
 MIN_CHARS = 400
 
-# A "?" that ends a sentence: followed by whitespace or end of text, optionally after closing
-# markdown or quotes (as in "**OK to push?**" or "(which one?)"). Excludes URL query strings.
-QUESTION_RE = re.compile(r"\?[*_`'\")\]]*(\s|$)")
+# A "?" that ends a sentence: right after a word or closing paren (bold/italic markers allowed in
+# between, as in "**the date**?"), and followed by whitespace or end of text, optionally after
+# closing markdown or quotes (as in "**OK to push?**" or "(which one?)"). Excludes URL query
+# strings and a literal "?" mentioned in quotes.
+QUESTION_RE = re.compile(r"[A-Za-z0-9)][*_]*\?[*_`'\")\]]*(\s|$)")
 
 # A question sentence that starts with a yes/no offer phrase, either at the start of the line
 # (after any markdown such as "- " or "**") or after the end of a previous sentence on that line.
@@ -80,8 +82,16 @@ class Decision:
         return self.decision == "open"
 
 
+# Code is quoted material, not a question to me: fenced blocks are removed and `inline spans` are
+# replaced by a placeholder word (so "delete `/tmp/x`?" still reads as a question) before looking
+# for questions.
+FENCED_CODE_RE = re.compile(r"^```.*?^```[^\n]*$", re.DOTALL | re.MULTILINE)
+INLINE_CODE_RE = re.compile(r"`[^`\n]*`")
+
+
 def question_lines(message: str) -> list[str]:
-    return [line.strip() for line in message.splitlines() if QUESTION_RE.search(line)]
+    prose = INLINE_CODE_RE.sub("code", FENCED_CODE_RE.sub("", message))
+    return [line.strip() for line in prose.splitlines() if QUESTION_RE.search(line)]
 
 
 def decide(message: str, *, inbox_used: bool = False, stop_hook_active: bool = False) -> Decision:
