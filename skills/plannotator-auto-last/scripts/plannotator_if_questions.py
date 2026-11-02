@@ -13,7 +13,8 @@ Intent
 Opens Plannotator when ALL of these hold (see decide()):
     - The reply is at least MIN_CHARS characters ("decently long").
     - It contains at least one question mark followed by whitespace or the end of the text.
-      One is enough: a list of questions often has only one "?" in it.
+      One is enough: a list of questions often has only one "?" in it. A "?" inside code (inline or
+      fenced, which includes drafted messages meant for someone else) doesn't count.
     - The only question is not a lone yes/no offer such as "Want me to commit this?" or
       "OK to force push?". Those are quicker to answer in the terminal. (In a replay of past
       sessions, about 40% of long replies with a question were just one of these offers.)

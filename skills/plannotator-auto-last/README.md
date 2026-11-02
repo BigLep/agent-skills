@@ -14,7 +14,7 @@ Plannotator opens only when all of these hold:
 | Rule | Why |
 |---|---|
 | Reply is at least 400 characters | Short replies are quick to answer in the terminal. |
-| Contains at least one sentence-ending `?` | One is enough: a list of questions often has only one `?`. URL query strings don't count; a `?` followed by closing markdown like `**` does. |
+| Contains at least one sentence-ending `?` | One is enough: a list of questions often has only one `?`. A `?` inside code (inline or fenced, including drafted messages for someone else), in a URL, or quoted as a literal `"?"` doesn't count; bold around it (`**date**?`, `**OK?**`) is fine. |
 | The only question isn't a lone yes/no offer ("Want me to…?", "Should I…?", "OK to…?") | Those are faster to answer in the terminal. In a replay of past sessions they were about 40% of long replies with a question. |
 | Claude didn't use the Plannotator Inbox this turn | If the questions went to the Inbox, you answer them there. |
 | Not already continuing after Plannotator feedback (`stop_hook_active`) | Prevents loops. |
