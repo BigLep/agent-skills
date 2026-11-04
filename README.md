@@ -12,6 +12,14 @@ Personal [Agent Skills](https://agentskills.io) (the `SKILL.md` format read by C
 | [plannotator-auto-last](skills/plannotator-auto-last) | Claude Code Stop hook that opens Plannotator when a reply asks you questions, plus a skill for diagnosing and tuning when it opens. Needs a manual hook entry; see its README. |
 | [why-does-this-matter](skills/why-does-this-matter) | Turn a new release or technology into a personalized explainer-and-pitches slide deck. |
 
+## Hooks
+
+Standalone Claude Code hooks that aren't skills (no `SKILL.md`, so the `skills` CLI doesn't install them). Each has its own README with the manual install step.
+
+| Hook | What it does |
+|---|---|
+| [permission-prompt-log](hooks/permission-prompt-log) | `PermissionRequest` hook that logs every tool call that wasn't auto-approved, with an inferred reason, to help tune permission rules. |
+
 ## Install
 
 ```sh
