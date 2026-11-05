@@ -22,11 +22,17 @@ Opens Plannotator when ALL of these hold (see decide()):
       Inbox, I answer them there, so opening Plannotator as well would be redundant.
     - The hook is not already in a feedback loop (stop_hook_active), so it won't reopen while
       Claude is still addressing my annotations.
+    - I started the turn, by typing a prompt or by sending Plannotator feedback. A turn started by
+      anything else (another Claude session, a background task notification, a coordinator) may
+      have nobody watching, and waiting for me would hang the session until I notice. Its reply is
+      still in the terminal, and /plannotator-last opens it by hand. Prompts with no recorded
+      sender count as mine, because plenty of my own sessions have none.
 
 How it hooks in
     Configured as a "Stop" command hook in ~/.claude/settings.json with a very long timeout so it
     can wait while I annotate (see the skill README). It reads the Stop event JSON on stdin
-    (last_assistant_message, transcript_path, stop_hook_active). When it opens Plannotator,
+    (last_assistant_message, transcript_path, stop_hook_active). The Inbox and unattended checks
+    read the transcript; if it can't be read, both count as false. When it opens Plannotator,
     `plannotator annotate-last --stdin --hook` blocks until I respond and its stdout is passed
     through unchanged:
     - Sending annotations prints {"decision":"block","reason":...}, which hands my feedback to
@@ -95,10 +101,14 @@ def question_lines(message: str) -> list[str]:
     return [line.strip() for line in prose.splitlines() if QUESTION_RE.search(line)]
 
 
-def decide(message: str, *, inbox_used: bool = False, stop_hook_active: bool = False) -> Decision:
+def decide(
+    message: str, *, inbox_used: bool = False, stop_hook_active: bool = False, unattended: bool = False
+) -> Decision:
     """Pure decision function. Order matters: the first rule that fails is the reported reason."""
     if stop_hook_active:
         return Decision("skip:stop_hook_active", "already continuing after Plannotator feedback")
+    if unattended:
+        return Decision("skip:unattended", "I didn't start this turn, so I may not be watching")
     if len(message) < MIN_CHARS:
         return Decision("skip:short", f"{len(message)} chars < {MIN_CHARS}")
     questions = question_lines(message)
@@ -166,6 +176,40 @@ def inbox_used_in_turn(entries: list[dict]) -> bool:
     return False
 
 
+INTERRUPT_MARKER = "[Request interrupted"
+
+
+def prompt_attended(entry: dict) -> bool | None:
+    """Whether a transcript entry shows I'm at the keyboard; None if it says nothing either way.
+
+    Allowlist: an origin kind added later counts as unattended until it is listed here.
+    """
+    if not is_user_prompt(entry):
+        return None
+    origin = entry.get("origin")
+    if isinstance(origin, dict) and origin.get("kind"):
+        # The Plannotator plugin only sends a message when I act in its UI. Other plugins may not.
+        return origin["kind"] == "human" or (origin["kind"] == "plugin" and origin.get("name") == "plannotator")
+    content = (entry.get("message") or {}).get("content")
+    text = content if isinstance(content, str) else " ".join(b.get("text", "") for b in content if isinstance(b, dict))
+    # Loaded skills and interrupt markers don't change who started the turn.
+    if entry.get("isMeta") or text.startswith(INTERRUPT_MARKER):
+        return None
+    return True  # A plain prompt with no recorded sender.
+
+
+def turn_unattended(entries: list[dict]) -> bool:
+    """True if the most recent prompt that says who sent it wasn't from me.
+
+    If I type something later in the turn, my prompt is the most recent.
+    """
+    for entry in reversed(entries):
+        attended = prompt_attended(entry)
+        if attended is not None:
+            return not attended
+    return False
+
+
 # ---------------------------------------------------------------------------------------------
 # Hook entry point.
 
@@ -175,14 +219,21 @@ def main() -> int:
     message = event.get("last_assistant_message") or ""
     transcript = event.get("transcript_path")
 
-    inbox_used = False
+    inbox_used = unattended = False
     if transcript and Path(transcript).is_file():
         try:
-            inbox_used = inbox_used_in_turn(load_transcript(transcript))
+            entries = load_transcript(transcript)
+            inbox_used = inbox_used_in_turn(entries)
+            unattended = turn_unattended(entries)
         except OSError:
             pass
 
-    result = decide(message, inbox_used=inbox_used, stop_hook_active=bool(event.get("stop_hook_active")))
+    result = decide(
+        message,
+        inbox_used=inbox_used,
+        stop_hook_active=bool(event.get("stop_hook_active")),
+        unattended=unattended,
+    )
 
     if os.environ.get("PLANNOTATOR_IF_QUESTIONS_DRY_RUN"):
         print(result.decision)

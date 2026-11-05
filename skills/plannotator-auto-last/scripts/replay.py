@@ -42,6 +42,7 @@ from plannotator_if_questions import (  # noqa: E402
     is_inbox_tool_use,
     is_user_prompt,
     load_transcript,
+    prompt_attended,
     question_lines,
 )
 from run_cases import CASES_FILE, load_cases, write_cases  # noqa: E402
@@ -56,28 +57,33 @@ class Turn:
     timestamp: str
     message: str
     inbox_used: bool
+    unattended: bool = False
 
     @property
     def decision(self) -> Decision:
-        return decide(self.message, inbox_used=self.inbox_used)
+        return decide(self.message, inbox_used=self.inbox_used, unattended=self.unattended)
 
 
 def turns_in(entries: list[dict]) -> list[Turn]:
     turns: list[Turn] = []
     last_text: dict | None = None
     inbox = False
+    unattended = False
 
     def close() -> None:
         nonlocal last_text
         if last_text is not None:
             text = [t for t in assistant_texts(last_text) if t.strip()][-1]
-            turns.append(Turn(len(turns), last_text.get("uuid", ""), last_text.get("timestamp", ""), text, inbox))
+            turns.append(Turn(len(turns), last_text.get("uuid", ""), last_text.get("timestamp", ""), text, inbox, unattended))
         last_text = None
 
     for entry in entries:
         if is_user_prompt(entry):
             close()
             inbox = False
+            attended = prompt_attended(entry)
+            if attended is not None:
+                unattended = not attended
         elif entry.get("type") == "assistant":
             content = (entry.get("message") or {}).get("content")
             if isinstance(content, list) and any(isinstance(b, dict) and is_inbox_tool_use(b) for b in content):
@@ -130,7 +136,7 @@ def cmd_show(args: argparse.Namespace) -> None:
     turn = pick_turn(turns_in(load_transcript(resolve_session(args.session))), args.turn)
     d = turn.decision
     print(f"turn {turn.index}  uuid {turn.uuid}  {turn.timestamp}")
-    print(f"decision: {d.decision}\nevidence: {d.detail}\nchars: {len(turn.message)}  inbox_used: {turn.inbox_used}")
+    print(f"decision: {d.decision}\nevidence: {d.detail}\nchars: {len(turn.message)}  inbox_used: {turn.inbox_used}  unattended: {turn.unattended}")
     print("question lines:")
     for q in question_lines(turn.message) or ["(none)"]:
         print(f"  - {q}")
@@ -143,6 +149,7 @@ def case_from(path: Path, turn: Turn, expected: str, note: str) -> dict:
         "expected": expected,
         "note": note,
         "inbox_used": turn.inbox_used,
+        "unattended": turn.unattended,
         "message": turn.message,
         "source": {"session": str(path), "turn_uuid": turn.uuid, "timestamp": turn.timestamp},
     }

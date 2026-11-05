@@ -10,7 +10,7 @@ Cases come from two files in ../evals/:
     cases.jsonl     Real turns from my sessions, gitignored (they contain private text).
                     Grown with `replay.py add` whenever the hook does the wrong thing.
 
-Each line: {"id", "expected", "note", "inbox_used", "message", "source"?}
+Each line: {"id", "expected", "note", "inbox_used", "unattended"?, "message", "source"?}
 "expected" is "open" or "skip:<reason>"; any skip counts as a match only if the reason matches too.
 
 Exit status is 1 if any case fails, so this is safe to run before and after a rule change.
@@ -47,7 +47,9 @@ def all_cases() -> list[tuple[str, dict]]:
 
 
 def run(case: dict) -> str:
-    return decide(case["message"], inbox_used=case.get("inbox_used", False)).decision
+    return decide(
+        case["message"], inbox_used=case.get("inbox_used", False), unattended=case.get("unattended", False)
+    ).decision
 
 
 def main() -> int:

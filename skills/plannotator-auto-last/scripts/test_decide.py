@@ -21,7 +21,7 @@ import pytest
 
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
-from plannotator_if_questions import decide, inbox_used_in_turn  # noqa: E402
+from plannotator_if_questions import decide, inbox_used_in_turn, turn_unattended  # noqa: E402
 from run_cases import all_cases, run  # noqa: E402
 
 PAD = "x" * 400
@@ -111,3 +111,74 @@ def test_corpus(source: str, case: dict) -> None:
 
 if __name__ == "__main__":
     sys.exit(pytest.main([__file__, "-q", *sys.argv[1:]]))
+
+
+QUESTIONS = PAD + "\nWhich region do you want?"
+
+
+def prompt(kind: str | None, *, name: str | None = None, meta: bool = False, text: str = "hello") -> dict:
+    entry: dict = {"type": "user", "message": {"content": text}}
+    if kind is not None:
+        entry["origin"] = {"kind": kind, **({"name": name} if name else {})}
+    if meta:
+        entry["isMeta"] = True
+    return entry
+
+
+def test_unattended_skips_even_with_questions() -> None:
+    assert decide(QUESTIONS, unattended=True).decision == "skip:unattended"
+    assert decide(QUESTIONS).decision == "open"
+
+
+HUMAN, PEER, TASK = prompt("human"), prompt("peer", meta=True), prompt("task-notification")
+SKILL = prompt(None, meta=True, text="Base directory for this skill")
+INTERRUPT = prompt(None, text="[Request interrupted by user]")
+TOOL_RESULT = {"type": "user", "message": {"content": [{"type": "tool_result", "content": "ok"}]}}
+
+
+@pytest.mark.parametrize(
+    ("entries", "expected"),
+    [
+        ([HUMAN], False),
+        ([PEER], True),
+        ([TASK], True),
+        ([prompt("coordinator")], True),
+        ([prompt("some-future-kind")], True),
+        ([prompt("plugin", name="plannotator")], False),
+        ([prompt("plugin", name="other")], True),
+        ([], False),
+        ([prompt(None)], False),  # no recorded sender, as in many of my own sessions
+        ([HUMAN, PEER], True),
+        ([PEER, HUMAN], False),
+        ([TASK, HUMAN], False),
+        ([HUMAN, TASK], True),
+        ([PEER, prompt(None)], False),
+        ([PEER, SKILL], True),
+        ([PEER, INTERRUPT], True),
+        ([PEER, TOOL_RESULT], True),
+        ([HUMAN, SKILL, TOOL_RESULT], False),
+    ],
+)
+def test_turn_unattended(entries: list[dict], expected: bool) -> None:
+    assert turn_unattended(entries) is expected
+
+
+def run_hook(tmp_path: Path, kind: str) -> str:
+    transcript = tmp_path / "t.jsonl"
+    transcript.write_text(json.dumps(prompt(kind)) + "\n")
+    event = {"last_assistant_message": QUESTIONS, "transcript_path": str(transcript)}
+    return subprocess.run(
+        [sys.executable, str(HERE / "plannotator_if_questions.py")],
+        input=json.dumps(event),
+        capture_output=True,
+        text=True,
+        check=True,
+        env={**os.environ, "PLANNOTATOR_IF_QUESTIONS_DRY_RUN": "1"},
+    ).stdout.strip()
+
+
+@pytest.mark.parametrize(
+    ("kind", "expected"), [("peer", "skip:unattended"), ("task-notification", "skip:unattended"), ("human", "open")]
+)
+def test_hook_reads_who_started_the_turn(tmp_path: Path, kind: str, expected: str) -> None:
+    assert run_hook(tmp_path, kind) == expected
