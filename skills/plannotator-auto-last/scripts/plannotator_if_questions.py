@@ -12,20 +12,24 @@ Intent
 
 Opens Plannotator when ALL of these hold (see decide()):
     - The reply is at least MIN_CHARS characters ("decently long").
-    - It contains at least one question mark followed by whitespace or the end of the text.
-      One is enough: a list of questions often has only one "?" in it. A "?" inside code (inline or
-      fenced, which includes drafted messages meant for someone else) doesn't count.
+    - It contains at least one question: a question mark followed by whitespace or the end of the
+      text, or a line marked with the ❓ emoji (as in "❓ **Q3** - ..." lists of decisions with a
+      recommended answer). One is enough: a list of questions often has only one "?" in it. A "?"
+      inside code (inline or fenced, which includes drafted messages meant for someone else)
+      doesn't count.
     - The only question is not a lone yes/no offer such as "Want me to commit this?" or
       "OK to force push?". Those are quicker to answer in the terminal. (In a replay of past
       sessions, about 40% of long replies with a question were just one of these offers.)
     - Claude did not use the Plannotator Inbox during this turn. If the questions went to the
       Inbox, I answer them there, so opening Plannotator as well would be redundant.
-    - The hook is not already in a feedback loop (stop_hook_active), so it won't reopen while
-      Claude is still addressing my annotations.
-    - I started the turn, by typing a prompt or by sending Plannotator feedback. A turn started by
-      anything else (another Claude session, a background task notification, a coordinator, an
-      Orca orchestration wake) may have nobody watching, and waiting for me would hang the session
-      until I notice. Its reply is still in the terminal, and /plannotator-last opens it by hand.
+    - I started the turn, by typing a prompt or by sending Plannotator feedback. That includes a
+      reply Claude writes after I send annotations from this hook (stop_hook_active): its new
+      questions are as worth answering in Plannotator as the first ones, and there is no loop,
+      because each reopen waits for me and Approve or Close ends the turn. It also includes a turn
+      started by a background task of this session finishing (a task notification): I'm usually
+      nearby and often open those by hand. A turn started by anything else (another Claude
+      session, a coordinator, an Orca orchestration wake) may have nobody watching, and waiting
+      for me would hang the session until I notice. Its reply is still in the terminal, and /plannotator-last opens it by hand.
       Prompts with no recorded sender count as mine, because plenty of my own sessions have none.
       Orca's wake is recognised by its text, because Orca types it into the terminal and Claude
       Code records it as human input.
@@ -33,7 +37,7 @@ Opens Plannotator when ALL of these hold (see decide()):
 How it hooks in
     Configured as a "Stop" command hook in ~/.claude/settings.json with a very long timeout so it
     can wait while I annotate (see the skill README). It reads the Stop event JSON on stdin
-    (last_assistant_message, transcript_path, stop_hook_active). The Inbox and unattended checks
+    (last_assistant_message, transcript_path). The Inbox and unattended checks
     read the transcript; if it can't be read, both count as false. When it opens Plannotator,
     `plannotator annotate-last --stdin --hook` blocks until I respond and its stdout is passed
     through unchanged:
@@ -91,6 +95,9 @@ class Decision:
         return self.decision == "open"
 
 
+# A line marked with this emoji is a question even without a "?".
+QUESTION_MARKER = "❓"
+
 # Code is quoted material, not a question to me: fenced blocks are removed and `inline spans` are
 # replaced by a placeholder word (so "delete `/tmp/x`?" still reads as a question) before looking
 # for questions.
@@ -100,22 +107,18 @@ INLINE_CODE_RE = re.compile(r"`[^`\n]*`")
 
 def question_lines(message: str) -> list[str]:
     prose = INLINE_CODE_RE.sub("code", FENCED_CODE_RE.sub("", message))
-    return [line.strip() for line in prose.splitlines() if QUESTION_RE.search(line)]
+    return [line.strip() for line in prose.splitlines() if QUESTION_RE.search(line) or QUESTION_MARKER in line]
 
 
-def decide(
-    message: str, *, inbox_used: bool = False, stop_hook_active: bool = False, unattended: bool = False
-) -> Decision:
+def decide(message: str, *, inbox_used: bool = False, unattended: bool = False) -> Decision:
     """Pure decision function. Order matters: the first rule that fails is the reported reason."""
-    if stop_hook_active:
-        return Decision("skip:stop_hook_active", "already continuing after Plannotator feedback")
     if unattended:
         return Decision("skip:unattended", "I didn't start this turn, so I may not be watching")
     if len(message) < MIN_CHARS:
         return Decision("skip:short", f"{len(message)} chars < {MIN_CHARS}")
     questions = question_lines(message)
     if not questions:
-        return Decision("skip:no_question", "no line contains a sentence-ending '?'")
+        return Decision("skip:no_question", "no line contains a sentence-ending '?' or ❓")
     if len(questions) == 1 and YES_NO_OFFER_RE.search(questions[0]):
         return Decision("skip:yes_no_offer", questions[0])
     if inbox_used:
@@ -199,7 +202,10 @@ def prompt_attended(entry: dict) -> bool | None:
     origin = entry.get("origin")
     if isinstance(origin, dict) and origin.get("kind"):
         # The Plannotator plugin only sends a message when I act in its UI. Other plugins may not.
-        return origin["kind"] == "human" or (origin["kind"] == "plugin" and origin.get("name") == "plannotator")
+        # A task notification is this session's own background work finishing, while I'm usually nearby.
+        return origin["kind"] in ("human", "task-notification") or (
+            origin["kind"] == "plugin" and origin.get("name") == "plannotator"
+        )
     # Loaded skills and interrupt markers don't change who started the turn.
     if entry.get("isMeta") or text.startswith(INTERRUPT_MARKER):
         return None
@@ -236,12 +242,7 @@ def main() -> int:
         except OSError:
             pass
 
-    result = decide(
-        message,
-        inbox_used=inbox_used,
-        stop_hook_active=bool(event.get("stop_hook_active")),
-        unattended=unattended,
-    )
+    result = decide(message, inbox_used=inbox_used, unattended=unattended)
 
     if os.environ.get("PLANNOTATOR_IF_QUESTIONS_DRY_RUN"):
         print(result.decision)

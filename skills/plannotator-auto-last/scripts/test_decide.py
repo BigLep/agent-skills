@@ -53,9 +53,13 @@ def test_rules(message: str, expected: str) -> None:
     assert decide(message).decision == expected
 
 
-def test_inbox_and_loop_guard() -> None:
+def test_inbox() -> None:
     assert decide(PAD + "\nWhich one?", inbox_used=True).decision == "skip:inbox"
-    assert decide(PAD + "\nWhich one?", stop_hook_active=True).decision == "skip:stop_hook_active"
+
+
+def test_question_marker_without_question_mark() -> None:
+    message = PAD + "\n\n❓ **Q4** - **Where the config lives**: keep it in the repo.\n\n➡️ Yes: keep it in the repo."
+    assert decide(message).decision == "open"
 
 
 def _assistant(*blocks: dict) -> dict:
@@ -97,7 +101,8 @@ def test_hook_contract(tmp_path: Path) -> None:
     ]))
     msg = PAD + "\nWhich one?"
     assert _run_hook({"last_assistant_message": msg}) == "open"
-    assert _run_hook({"last_assistant_message": msg, "stop_hook_active": True}) == "skip:stop_hook_active"
+    # A reply written after Plannotator feedback still opens; each reopen waits for me, so it can't loop.
+    assert _run_hook({"last_assistant_message": msg, "stop_hook_active": True}) == "open"
     assert _run_hook({"last_assistant_message": msg, "transcript_path": str(transcript)}) == "skip:inbox"
 
 
@@ -146,7 +151,7 @@ TOOL_RESULT = {"type": "user", "message": {"content": [{"type": "tool_result", "
     [
         ([HUMAN], False),
         ([PEER], True),
-        ([TASK], True),
+        ([TASK], False),  # this session's own background work finishing
         ([prompt("coordinator")], True),
         ([prompt("some-future-kind")], True),
         ([prompt("plugin", name="plannotator")], False),
@@ -156,7 +161,8 @@ TOOL_RESULT = {"type": "user", "message": {"content": [{"type": "tool_result", "
         ([HUMAN, PEER], True),
         ([PEER, HUMAN], False),
         ([TASK, HUMAN], False),
-        ([HUMAN, TASK], True),
+        ([HUMAN, TASK], False),
+        ([PEER, TASK], False),
         ([PEER, prompt(None)], False),
         ([PEER, SKILL], True),
         ([PEER, INTERRUPT], True),
@@ -188,7 +194,7 @@ def run_hook(tmp_path: Path, kind: str) -> str:
 
 
 @pytest.mark.parametrize(
-    ("kind", "expected"), [("peer", "skip:unattended"), ("task-notification", "skip:unattended"), ("human", "open")]
+    ("kind", "expected"), [("peer", "skip:unattended"), ("task-notification", "open"), ("human", "open")]
 )
 def test_hook_reads_who_started_the_turn(tmp_path: Path, kind: str, expected: str) -> None:
     assert run_hook(tmp_path, kind) == expected

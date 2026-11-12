@@ -34,4 +34,4 @@ All scripts are uv scripts in `scripts/` under this skill's directory; run them 
 
 - If nothing opens at all, check that the hook is registered (`jq '.hooks.Stop' ~/.claude/settings.json` should list the script path) and that Claude Code was restarted or `/hooks` reviewed after the change.
 - To see what the hook decides for an event without opening Plannotator, pipe Stop-event JSON into the hook with `PLANNOTATOR_IF_QUESTIONS_DRY_RUN=1` set.
-- `stop_hook_active` is true while Claude is continuing after Plannotator feedback, so the hook never reopens in that state. That's deliberate, to avoid loops.
+- `stop_hook_active` is true while Claude is continuing after Plannotator feedback. The hook ignores it and applies the normal rules, because each reopen waits for the user and Approve or Close ends the turn. `replay.py` treats those turns like any other.

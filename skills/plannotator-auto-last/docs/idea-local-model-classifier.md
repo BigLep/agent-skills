@@ -1,6 +1,6 @@
 # Idea: a local model to detect replies awaiting input (parked)
 
-Status: parked on 2026-11-03 until there are enough saved cases to compare against. Nothing here is built.
+Status: parked on 2026-11-03, tried and left parked on 2026-11-12 (see below). Nothing here is in the hook.
 
 ## Why it came up
 
@@ -11,6 +11,14 @@ Some longer replies that were awaiting input did not open Plannotator. The regex
 Evidence that the heuristic misses enough turns to matter. The way to get it: whenever a reply should have opened Plannotator and didn't (or the reverse), run the `plannotator-auto-last` skill and save the turn with `replay.py add`. When `evals/cases.jsonl` has a meaningful number of misses the regexes can't reasonably fix, revisit this.
 
 At the time of parking: 22 real saved cases plus 7 examples, all passing. A replay sample of recent sessions decided 145 `no_question`, 81 `open`, 51 `short`, 32 `yes_no_offer`, 2 `inbox`.
+
+## Tried on 2026-11-12: no better than the heuristic
+
+A Foundation Models CLI (guided generation returning `awaitingInput: Bool`, reply trimmed to its last 6,000 characters) was run over 382 attended replies from 2026-11-03 to 2026-11-12. The labels came from what I did next: answered in Plannotator, opened it by hand with `/plannotator-last`, or just typed.
+
+- **Latency:** fine. Median about 0.7s, 90th percentile about 1s, max 1.8s. One reply was refused as possibly sensitive.
+- **Accuracy:** not useful. It said "awaiting input" for 93% of replies: all 110 the heuristic opens, and 165 of the 186 no-question replies I did not open. On the replies the heuristic skips, its "yes" matched what I wanted no better than the base rate (about 11%).
+- **Why:** most remaining misses are long reports or drafts I wanted to comment on, not replies that ask something. Whether I want Plannotator there depends on me more than on the text, so a better prompt is unlikely to fix it.
 
 ## Decisions reached so far
 
