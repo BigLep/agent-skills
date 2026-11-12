@@ -18,7 +18,7 @@ Plannotator opens only when all of these hold:
 | The only question isn't a lone yes/no offer ("Want me to…?", "Should I…?", "OK to…?") | Those are faster to answer in the terminal. In a replay of past sessions they were about 40% of long replies with a question. |
 | Claude didn't use the Plannotator Inbox this turn | If the questions went to the Inbox, you answer them there. |
 | Not already continuing after Plannotator feedback (`stop_hook_active`) | Prevents loops. |
-| You started the turn, by typing a prompt or sending Plannotator feedback | A turn started by anything else (another Claude session, a background task notification, a coordinator) may have nobody watching, and waiting for you would hang the session until you notice. The reply stays in the terminal, and `/plannotator-last` opens it by hand. Prompts with no recorded sender count as yours. |
+| You started the turn, by typing a prompt or sending Plannotator feedback | A turn started by anything else (another Claude session, a background task notification, a coordinator, an Orca orchestration wake) may have nobody watching, and waiting for you would hang the session until you notice. The reply stays in the terminal, and `/plannotator-last` opens it by hand. Prompts with no recorded sender count as yours. Orca's wake ("You have N orchestration message(s)...") is recognised by its text, because Orca types it into the terminal and Claude Code records it as human input. |
 
 When it opens, `plannotator annotate-last --stdin --hook` waits for you. Sending annotations hands them to Claude and the turn continues; Approve or Close ends the turn normally.
 

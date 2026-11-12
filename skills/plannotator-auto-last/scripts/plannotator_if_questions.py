@@ -23,10 +23,12 @@ Opens Plannotator when ALL of these hold (see decide()):
     - The hook is not already in a feedback loop (stop_hook_active), so it won't reopen while
       Claude is still addressing my annotations.
     - I started the turn, by typing a prompt or by sending Plannotator feedback. A turn started by
-      anything else (another Claude session, a background task notification, a coordinator) may
-      have nobody watching, and waiting for me would hang the session until I notice. Its reply is
-      still in the terminal, and /plannotator-last opens it by hand. Prompts with no recorded
-      sender count as mine, because plenty of my own sessions have none.
+      anything else (another Claude session, a background task notification, a coordinator, an
+      Orca orchestration wake) may have nobody watching, and waiting for me would hang the session
+      until I notice. Its reply is still in the terminal, and /plannotator-last opens it by hand.
+      Prompts with no recorded sender count as mine, because plenty of my own sessions have none.
+      Orca's wake is recognised by its text, because Orca types it into the terminal and Claude
+      Code records it as human input.
 
 How it hooks in
     Configured as a "Stop" command hook in ~/.claude/settings.json with a very long timeout so it
@@ -177,6 +179,9 @@ def inbox_used_in_turn(entries: list[dict]) -> bool:
 
 
 INTERRUPT_MARKER = "[Request interrupted"
+# The wake an Orca coordinator gets when a worker reports, e.g.
+# "You have 1 orchestration message. Run `orca orchestration check --run run_...`."
+ORCA_WAKE_RE = re.compile(r"\s*You have \d+ (new )?orchestration messages?\b")
 
 
 def prompt_attended(entry: dict) -> bool | None:
@@ -186,12 +191,15 @@ def prompt_attended(entry: dict) -> bool | None:
     """
     if not is_user_prompt(entry):
         return None
+    content = (entry.get("message") or {}).get("content")
+    text = content if isinstance(content, str) else " ".join(b.get("text", "") for b in content if isinstance(b, dict))
+    # Orca types its wake into the terminal, so Claude Code records it as human input.
+    if ORCA_WAKE_RE.match(text):
+        return False
     origin = entry.get("origin")
     if isinstance(origin, dict) and origin.get("kind"):
         # The Plannotator plugin only sends a message when I act in its UI. Other plugins may not.
         return origin["kind"] == "human" or (origin["kind"] == "plugin" and origin.get("name") == "plannotator")
-    content = (entry.get("message") or {}).get("content")
-    text = content if isinstance(content, str) else " ".join(b.get("text", "") for b in content if isinstance(b, dict))
     # Loaded skills and interrupt markers don't change who started the turn.
     if entry.get("isMeta") or text.startswith(INTERRUPT_MARKER):
         return None

@@ -133,6 +133,11 @@ def test_unattended_skips_even_with_questions() -> None:
 HUMAN, PEER, TASK = prompt("human"), prompt("peer", meta=True), prompt("task-notification")
 SKILL = prompt(None, meta=True, text="Base directory for this skill")
 INTERRUPT = prompt(None, text="[Request interrupted by user]")
+ORCA_WAKE = prompt("human", text="\nYou have 2 orchestration messages. Run `orca orchestration check --run run_abc`.\n")
+ORCA_WAKE_HELD = prompt(
+    "human", text="\nYou have 1 new orchestration message after delivery d_1, which you have not acknowledged.\n"
+)
+MENTIONS_WAKE = prompt("human", text="Why did it say 'You have 1 orchestration message' so late?")
 TOOL_RESULT = {"type": "user", "message": {"content": [{"type": "tool_result", "content": "ok"}]}}
 
 
@@ -157,6 +162,11 @@ TOOL_RESULT = {"type": "user", "message": {"content": [{"type": "tool_result", "
         ([PEER, INTERRUPT], True),
         ([PEER, TOOL_RESULT], True),
         ([HUMAN, SKILL, TOOL_RESULT], False),
+        ([ORCA_WAKE], True),  # Orca types its wake, so it is recorded as human input
+        ([ORCA_WAKE_HELD], True),
+        ([prompt(None, text="You have 1 orchestration message. Run `orca orchestration check`.")], True),
+        ([ORCA_WAKE, HUMAN], False),
+        ([MENTIONS_WAKE], False),  # only a prompt that starts with the wake counts
     ],
 )
 def test_turn_unattended(entries: list[dict], expected: bool) -> None:
