@@ -41,3 +41,7 @@ ln -s ../../.agents/skills/<name> ~/.claude/skills/<name>
 - Frontmatter uses only spec fields: `name`, `description`, and optionally `license`, `compatibility`, `metadata`, `allowed-tools`.
 - No agent-specific argument placeholders (`$ARGUMENTS`, `arguments:`); describe the input in prose.
 - Reference bundled files relative to the skill directory, never by an agent-specific install path.
+
+## License
+
+[MIT](LICENSE)
